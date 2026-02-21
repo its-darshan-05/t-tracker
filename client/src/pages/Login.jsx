@@ -1,31 +1,116 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import API from "../services/api";
-import { Mail, Lock, Loader2, ArrowRight, ShieldCheck, AlertCircle } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Mail, Lock, ArrowRight, ShieldCheck, AlertCircle, Factory } from "lucide-react";
+
+/* ─── DESIGN TOKENS ─────────────────────────────────────── */
+const C = {
+  paper:  "#FAFAF8",
+  white:  "#FFFFFF",
+  pearl:  "#F4F3EF",
+  silk:   "#EAE9E4",
+  mist:   "#D4D3CC",
+  stone:  "#9B9A94",
+  slate:  "#6B6A64",
+  ink:    "#2C2B27",
+  navy:   "#1B2A4A",
+  navyD:  "#0F1E38",
+  teal:   "#0D7A6B",
+  tealL:  "#E8F5F3",
+  tealM:  "#B3DDD8",
+  rose:   "#C0392B",
+  roseL:  "#FDF0EE",
+  roseM:  "#F5B7B1",
+};
+
+/* ─── FONTS ──────────────────────────────────────────────── */
+const FontStyle = () => (
+  <style>{`
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body { background: #FAFAF8; }
+
+    input::placeholder { color: #C8C7C0; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; }
+    input:focus { outline: none; }
+    button:focus { outline: none; }
+
+    .auth-input {
+      width: 100%;
+      background: #F4F3EF;
+      border: 1.5px solid transparent;
+      border-radius: 12px;
+      padding: 14px 16px 14px 46px;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 13.5px;
+      color: #2C2B27;
+      transition: all 0.18s ease;
+      letter-spacing: 0.01em;
+    }
+    .auth-input:focus {
+      background: #FFFFFF;
+      border-color: #1B2A4A;
+      box-shadow: 0 0 0 3px rgba(27,42,74,0.07);
+    }
+    .auth-input.error {
+      border-color: #C0392B;
+      background: #FDF0EE;
+    }
+
+    .login-btn {
+      width: 100%;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      background: #1B2A4A; color: #FFFFFF;
+      border: none; border-radius: 12px;
+      padding: 15px 24px; cursor: pointer;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px; letter-spacing: 0.18em; font-weight: 500;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 20px rgba(27,42,74,0.22);
+    }
+    .login-btn:hover:not(:disabled) {
+      background: #0F1E38;
+      box-shadow: 0 6px 28px rgba(27,42,74,0.32);
+      transform: translateY(-1px);
+    }
+    .login-btn:active:not(:disabled) { transform: translateY(0); }
+    .login-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+  `}</style>
+);
 
 export default function Login() {
-  const [email, setEmail] = useState("");
+  const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState("");
 
   const login = async () => {
     setError("");
-    if (!email || !password) {
-      setError("Please fill in all credentials");
-      return;
-    }
-
+    if (!email || !password) { setError("Please fill in all credentials"); return; }
     try {
       setLoading(true);
       const res = await API.post("/auth/login", { email, password });
       localStorage.setItem("token", res.data.token);
-      
-      // Smooth redirect
-      setTimeout(() => {
-        window.location.href = "/profile";
-      }, 500);
-    } catch (err) {
+      setTimeout(() => { window.location.href = "/profile"; }, 500);
+    } catch {
       setError("Invalid email or password. Please try again.");
     } finally {
       setLoading(false);
@@ -33,128 +118,290 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFCF8] flex items-center justify-center px-4 overflow-hidden relative">
-      {/* Subtle Background Elements */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-sage/5 rounded-full blur-3xl" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-mustard/5 rounded-full blur-3xl" />
+    <>
+      <FontStyle />
+      <div style={{
+        minHeight: "100vh",
+        background: C.paper,
+        display: "flex",
+        position: "relative",
+        overflow: "hidden",
+      }}>
 
-      <motion.div
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
-        className="w-full max-w-[440px] z-10"
-      >
-        {/* LOGO AREA */}
-        <div className="flex justify-center mb-8">
-          <motion.div 
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.2 }}
-            className="w-16 h-16 bg-coffee rounded-3xl flex items-center justify-center shadow-2xl shadow-coffee/20"
-          >
-            <ShieldCheck className="text-sage" size={32} />
-          </motion.div>
-        </div>
+        {/* ── LEFT PANEL (brand) ──────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, x: -30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.7, ease: [0.25, 1, 0.5, 1] }}
+          style={{
+            width: "42%",
+            background: C.navy,
+            display: "flex", flexDirection: "column",
+            justifyContent: "space-between",
+            padding: "52px 52px 48px",
+            position: "relative", overflow: "hidden",
+            flexShrink: 0,
+          }}
+        >
+          {/* Subtle geometric bg decoration */}
+          <div style={{
+            position: "absolute", bottom: -80, right: -80,
+            width: 340, height: 340, borderRadius: "50%",
+            border: "1px solid rgba(255,255,255,0.04)",
+            pointerEvents: "none",
+          }} />
+          <div style={{
+            position: "absolute", bottom: -40, right: -40,
+            width: 200, height: 200, borderRadius: "50%",
+            border: "1px solid rgba(255,255,255,0.05)",
+            pointerEvents: "none",
+          }} />
+          <div style={{
+            position: "absolute", top: 0, left: 0, right: 0,
+            height: 3,
+            background: `linear-gradient(90deg, ${C.teal}, transparent)`,
+          }} />
 
-        <div className="bg-white rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-gray-100 p-10 relative">
-          
-          {/* HEADER */}
-          <div className="text-center mb-10">
-            <h2 className="text-3xl font-black text-coffee tracking-tight mb-2">
-              Welcome Back
-            </h2>
-            <p className="text-gray-400 font-medium">
-              Access your factory dashboard
+          {/* Logo */}
+          <div style={{ position: "relative", zIndex: 1 }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 12,
+              background: "rgba(255,255,255,0.08)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              marginBottom: 52,
+            }}>
+              <Factory size={22} color="rgba(255,255,255,0.9)" />
+            </div>
+
+            <p style={{
+              fontFamily: "'IBM Plex Mono', monospace",
+              fontSize: 10, letterSpacing: "0.3em",
+              color: C.teal, textTransform: "uppercase", marginBottom: 20,
+            }}>
+              Commodity Intelligence
+            </p>
+
+            <h1 style={{
+              fontFamily: "'Playfair Display', serif",
+              fontSize: "clamp(28px, 3.5vw, 44px)",
+              fontWeight: 700, letterSpacing: "-0.03em", lineHeight: 1.15,
+              color: "#FFFFFF", marginBottom: 24,
+            }}>
+              The smarter way to manage{" "}
+              <span style={{ fontStyle: "italic", color: C.tealM }}>procurement.</span>
+            </h1>
+
+            <p style={{
+              fontFamily: "'IBM Plex Sans', sans-serif",
+              fontSize: 14, color: "rgba(255,255,255,0.45)",
+              lineHeight: 1.75, maxWidth: 320,
+            }}>
+              Real-time pricing, factory directory, and market analytics — all in one platform built for commodity traders.
             </p>
           </div>
 
-          <AnimatePresence mode="wait">
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="mb-6 overflow-hidden"
-              >
-                <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-sm font-bold flex items-center gap-3 border border-red-100">
-                  <AlertCircle size={18} />
-                  {error}
+          {/* Bottom trust block */}
+          <div style={{ position: "relative", zIndex: 1 }}>
+            <div style={{
+              height: 1,
+              background: "rgba(255,255,255,0.07)",
+              marginBottom: 24,
+            }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <ShieldCheck size={14} color={C.tealM} />
+              <span style={{
+                fontFamily: "'IBM Plex Mono', monospace",
+                fontSize: 10, color: "rgba(255,255,255,0.3)",
+                letterSpacing: "0.14em",
+              }}>
+                ENTERPRISE-GRADE SECURITY · DATA ENCRYPTED
+              </span>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* ── RIGHT PANEL (form) ──────────────────────────── */}
+        <div style={{
+          flex: 1,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: "40px 48px",
+        }}>
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.6, ease: [0.25, 1, 0.5, 1] }}
+            style={{ width: "100%", maxWidth: 400 }}
+          >
+
+            {/* Title */}
+            <div style={{ marginBottom: 44 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
+                <div style={{ width: 24, height: 2, background: C.navy, borderRadius: 1 }} />
+                <span style={{
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontSize: 10, letterSpacing: "0.28em",
+                  color: C.navy, textTransform: "uppercase",
+                }}>
+                  Secure Access
+                </span>
+              </div>
+              <h2 style={{
+                fontFamily: "'Playfair Display', serif",
+                fontSize: 36, fontWeight: 700,
+                letterSpacing: "-0.03em", color: C.ink,
+                lineHeight: 1.1, marginBottom: 10,
+              }}>
+                Welcome{" "}
+                <span style={{ fontStyle: "italic", color: C.navy }}>back.</span>
+              </h2>
+              <p style={{
+                fontFamily: "'IBM Plex Sans', sans-serif",
+                fontSize: 13.5, color: C.stone, lineHeight: 1.6,
+              }}>
+                Sign in to access your factory dashboard.
+              </p>
+            </div>
+
+            {/* Error banner */}
+            <AnimatePresence>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                  animate={{ opacity: 1, height: "auto", marginBottom: 24 }}
+                  exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                  style={{ overflow: "hidden" }}
+                >
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 10,
+                    padding: "12px 16px", borderRadius: 12,
+                    background: C.roseL, border: `1px solid ${C.roseM}`,
+                    fontFamily: "'IBM Plex Sans', sans-serif",
+                    fontSize: 13, color: C.rose,
+                  }}>
+                    <AlertCircle size={15} style={{ flexShrink: 0 }} />
+                    {error}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Fields */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 32 }}>
+
+              {/* Email */}
+              <div>
+                <p style={{
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontSize: 9, letterSpacing: "0.22em",
+                  color: C.stone, textTransform: "uppercase", marginBottom: 8,
+                }}>
+                  Official Email
+                </p>
+                <div style={{ position: "relative" }}>
+                  <Mail size={15} style={{
+                    position: "absolute", left: 15, top: "50%",
+                    transform: "translateY(-50%)",
+                    color: C.mist, pointerEvents: "none",
+                  }} />
+                  <input
+                    type="email"
+                    placeholder="name@factory.com"
+                    className={`auth-input${error ? " error" : ""}`}
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && login()}
+                  />
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+              </div>
 
-          <div className="space-y-5">
-            {/* EMAIL */}
-            <div className="group">
-              <label className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-2 mb-2 block">
-                Official Email
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-sage transition-colors" size={20} />
-                <input
-                  type="email"
-                  className="w-full pl-12 pr-4 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-sage/20 transition-all outline-none font-medium placeholder:text-gray-300"
-                  placeholder="name@factory.com"
-                  onChange={(e) => setEmail(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && login()}
-                />
+              {/* Password */}
+              <div>
+                <p style={{
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontSize: 9, letterSpacing: "0.22em",
+                  color: C.stone, textTransform: "uppercase", marginBottom: 8,
+                }}>
+                  Security Key
+                </p>
+                <div style={{ position: "relative" }}>
+                  <Lock size={15} style={{
+                    position: "absolute", left: 15, top: "50%",
+                    transform: "translateY(-50%)",
+                    color: C.mist, pointerEvents: "none",
+                  }} />
+                  <input
+                    type="password"
+                    placeholder="••••••••"
+                    className={`auth-input${error ? " error" : ""}`}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && login()}
+                  />
+                </div>
               </div>
             </div>
 
-            {/* PASSWORD */}
-            <div className="group">
-              <label className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-2 mb-2 block">
-                Security Key
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-sage transition-colors" size={20} />
-                <input
-                  type="password"
-                  className="w-full pl-12 pr-4 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-sage/20 transition-all outline-none font-medium placeholder:text-gray-300"
-                  placeholder="••••••••"
-                  onChange={(e) => setPassword(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && login()}
-                />
-              </div>
-            </div>
-
-            {/* LOGIN BUTTON */}
+            {/* Submit */}
             <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileTap={{ scale: 0.985 }}
               onClick={login}
               disabled={loading}
-              className="w-full mt-8 py-4 rounded-[1.25rem] font-bold text-white bg-coffee hover:bg-black transition-all shadow-xl shadow-coffee/20 flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="login-btn"
             >
               {loading ? (
-                <Loader2 className="animate-spin" size={22} />
+                <div className="spinner" />
               ) : (
                 <>
-                  Authenticate
-                  <ArrowRight size={20} />
+                  AUTHENTICATE
+                  <ArrowRight size={15} />
                 </>
               )}
             </motion.button>
-          </div>
 
-          <div className="mt-10 pt-8 border-t border-gray-50 text-center">
-            <p className="text-xs text-gray-400 font-medium">
-              Protected by Enterprise Grade Encryption
+            {/* Divider */}
+            <div style={{
+              margin: "36px 0 28px",
+              height: 1, background: C.silk,
+            }} />
+
+            {/* Register link */}
+            <p style={{
+              fontFamily: "'IBM Plex Sans', sans-serif",
+              fontSize: 13, color: C.stone,
+              textAlign: "center",
+            }}>
+              New to MarketCore?{" "}
+              <Link to="/register" style={{
+                fontFamily: "'IBM Plex Mono', monospace",
+                fontSize: 11, letterSpacing: "0.1em",
+                color: C.navy, fontWeight: 500,
+                textDecoration: "none",
+                borderBottom: `1px solid ${C.navy}`,
+                paddingBottom: 1,
+              }}>
+                CREATE ACCOUNT
+              </Link>
             </p>
-          </div>
-        </div>
 
-        {/* HELP LINK */}
-        <motion.p 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1 }}
-          className="text-center mt-8 text-sm text-gray-400"
-        >
-          Trouble logging in? <span className="text-sage font-bold cursor-pointer hover:underline">Contact Support</span>
-        </motion.p>
-      </motion.div>
-    </div>
+            {/* Help */}
+            <p style={{
+              fontFamily: "'IBM Plex Sans', sans-serif",
+              fontSize: 12, color: C.mist,
+              textAlign: "center", marginTop: 16,
+            }}>
+              Trouble logging in?{" "}
+              <span style={{
+                color: C.stone, cursor: "pointer",
+                borderBottom: `1px solid ${C.mist}`,
+                paddingBottom: 1,
+              }}>
+                Contact Support
+              </span>
+            </p>
+          </motion.div>
+        </div>
+      </div>
+    </>
   );
 }
