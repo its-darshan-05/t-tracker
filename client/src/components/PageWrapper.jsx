@@ -1,16 +1,8 @@
 import { motion } from "framer-motion";
 
-/* ─── DESIGN TOKENS ─────────────────────────────────────── */
 const C = {
-  paper:  "#FAFAF8",
-  pearl:  "#F4F3EF",
-  silk:   "#EAE9E4",
-  mist:   "#D4D3CC",
-  stone:  "#9B9A94",
-  slate:  "#6B6A64",
-  ink:    "#2C2B27",
-  navy:   "#1B2A4A",
-  teal:   "#0D7A6B",
+  paper: "#FAFAF8", silk: "#EAE9E4", stone: "#9B9A94",
+  ink: "#2C2B27", navy: "#1B2A4A", teal: "#0D7A6B",
 };
 
 const FontStyle = () => (
@@ -23,22 +15,13 @@ export default function PageWrapper({ title, subtitle, eyebrow, children, noPad 
   return (
     <>
       <FontStyle />
-      <div style={{
-        minHeight: "100vh",
-        background: C.paper,
-        color: C.ink,
-      }}>
+      <div style={{ minHeight: "100vh", background: C.paper, color: C.ink, display: "flex", flexDirection: "column" }}>
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.4, ease: [0.25, 1, 0.5, 1] }}
-          style={{
-            maxWidth: 1320,
-            margin: "0 auto",
-            padding: noPad ? 0 : "0 40px 80px",
-          }}
+          transition={{ duration: 0.4 }}
+          style={{ flex: 1, maxWidth: 1320, margin: "0 auto", width: "100%", padding: noPad ? 0 : "0 40px 80px" }}
         >
-          {/* ── PAGE HEADER ────────────────────────────── */}
           {(title || subtitle) && (
             <motion.div
               initial={{ opacity: 0, y: 18 }}
@@ -46,66 +29,46 @@ export default function PageWrapper({ title, subtitle, eyebrow, children, noPad 
               transition={{ duration: 0.55, ease: [0.25, 1, 0.5, 1] }}
               style={{ padding: "56px 0 40px" }}
             >
-              {/* Eyebrow row */}
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
-                <div style={{
-                  width: 28, height: 2,
-                  background: C.navy, borderRadius: 1,
-                }} />
+                <div style={{ width: 28, height: 2, background: C.teal, borderRadius: 1 }} />
                 <span style={{
                   fontFamily: "'IBM Plex Mono', monospace",
                   fontSize: 10, letterSpacing: "0.28em",
-                  color: C.navy, textTransform: "uppercase",
+                  color: C.teal, textTransform: "uppercase",
                 }}>
-                  {eyebrow || "MarketCore"}
+                  {eyebrow || "TeaTracker"}
                 </span>
               </div>
 
-              {/* Title */}
               {title && (
                 <h1 style={{
                   fontFamily: "'Playfair Display', serif",
                   fontSize: "clamp(30px, 4vw, 52px)",
-                  fontWeight: 700, letterSpacing: "-0.03em",
-                  lineHeight: 1.1, color: C.ink,
-                  marginBottom: subtitle ? 14 : 0,
+                  fontWeight: 700, letterSpacing: "-0.03em", lineHeight: 1.1,
+                  color: C.ink, marginBottom: subtitle ? 14 : 0,
                 }}>
-                  {/* Split last word to italicize it in navy */}
                   {(() => {
                     const words = title.split(" ");
-                    if (words.length === 1) return <span style={{ color: C.ink }}>{title}</span>;
+                    if (words.length === 1) return title;
                     const last = words.pop();
-                    return (
-                      <>
-                        {words.join(" ")}{" "}
-                        <span style={{ fontStyle: "italic", color: C.navy }}>{last}</span>
-                      </>
-                    );
+                    return <>{words.join(" ")} <span style={{ fontStyle: "italic", color: C.navy }}>{last}</span></>;
                   })()}
                 </h1>
               )}
 
-              {/* Subtitle */}
               {subtitle && (
                 <p style={{
                   fontFamily: "'IBM Plex Sans', sans-serif",
-                  fontSize: 14, color: C.stone,
-                  lineHeight: 1.7, maxWidth: 560,
+                  fontSize: 14, color: C.stone, lineHeight: 1.7, maxWidth: 560,
                 }}>
                   {subtitle}
                 </p>
               )}
 
-              {/* Divider */}
-              <div style={{
-                marginTop: 36,
-                height: 1,
-                background: C.silk,
-              }} />
+              <div style={{ marginTop: 36, height: 1, background: C.silk }} />
             </motion.div>
           )}
 
-          {/* ── PAGE CONTENT ───────────────────────────── */}
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -115,16 +78,24 @@ export default function PageWrapper({ title, subtitle, eyebrow, children, noPad 
           </motion.div>
         </motion.div>
 
-        {/* ── FOOTER ─────────────────────────────────── */}
+        {/* FOOTER */}
         <footer style={{
-          background: C.navy,
-          padding: "24px 40px",
-          display: "flex", justifyContent: "center",
-          fontFamily: "'IBM Plex Mono', monospace",
-          fontSize: 10, letterSpacing: "0.22em",
-          color: "rgba(255,255,255,0.3)",
+          background: C.navy, padding: "20px 40px",
+          display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
         }}>
-          MARKETCORE · COMMODITY INTELLIGENCE PLATFORM · {new Date().getFullYear()}
+          <span style={{
+            fontFamily: "'IBM Plex Mono', monospace",
+            fontSize: 10, letterSpacing: "0.22em",
+            color: "rgba(255,255,255,0.35)",
+          }}>
+            TEATRACKER · COMMODITY INTELLIGENCE PLATFORM · {new Date().getFullYear()}
+          </span>
+          <span style={{
+            fontFamily: "'IBM Plex Sans', sans-serif",
+            fontSize: 11, color: "rgba(255,255,255,0.2)",
+          }}>
+            Developed & all rights reserved · Darshan Bharathi R
+          </span>
         </footer>
       </div>
     </>
