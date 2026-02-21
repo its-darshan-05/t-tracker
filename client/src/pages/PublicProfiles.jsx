@@ -1,209 +1,131 @@
-import { useEffect, useState, useMemo, useRef } from "react";
-import { motion, AnimatePresence, useScroll, useTransform, useMotionValue, useSpring } from "framer-motion";
+import { useEffect, useState, useMemo } from "react";
+import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
 import API from "../services/api";
 import { useNavigate } from "react-router-dom";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, Legend,
 } from "recharts";
-import { Search, Filter, RotateCcw, Copy, Check, Factory, MapPin, Phone, User, TrendingUp, ChevronDown, Leaf, Coffee } from "lucide-react";
+import {
+  Search, Filter, RotateCcw, Copy, Check,
+  Factory, MapPin, Phone, User, TrendingUp, Leaf, Coffee, ChevronDown
+} from "lucide-react";
 
-/* ─── DESIGN TOKENS ────────────────────────────────────── */
-const PALETTE = {
-  obsidian: "#0D0D0F",
-  carbon:   "#16161A",
-  slate:    "#1E1E24",
-  smoke:    "#2A2A33",
-  fog:      "#9898A6",
-  ghost:    "#C8C8D4",
-  snow:     "#F0F0F6",
-  jade:     "#3ECF8E",
-  amber:    "#F5A623",
-  rose:     "#FF6B6B",
-  violet:   "#7C5CFC",
+/* ─── DESIGN TOKENS ─────────────────────────────────────── */
+const C = {
+  paper:    "#FAFAF8",
+  white:    "#FFFFFF",
+  pearl:    "#F4F3EF",
+  silk:     "#EAE9E4",
+  mist:     "#D4D3CC",
+  stone:    "#9B9A94",
+  slate:    "#6B6A64",
+  ink:      "#2C2B27",
+  navy:     "#1B2A4A",
+  navyD:    "#0F1E38",
+  teal:     "#0D7A6B",
+  tealL:    "#E8F5F3",
+  tealM:    "#B3DDD8",
+  gold:     "#B8860B",
+  goldL:    "#FDF6E3",
+  goldM:    "#F0D080",
+  rose:     "#C0392B",
+  roseL:    "#FDF0EE",
 };
 
-const CHART_COLORS = ["#3ECF8E", "#F5A623", "#7C5CFC", "#FF6B6B", "#38BDF8", "#FB7185", "#A3E635", "#FB923C"];
+const CHART_COLORS = ["#0D7A6B", "#1B2A4A", "#B8860B", "#C0392B", "#2980B9", "#8E44AD", "#16A085", "#E67E22"];
 
-/* ─── FONT INJECT ───────────────────────────────────────── */
+/* ─── FONTS ──────────────────────────────────────────────── */
 const FontStyle = () => (
   <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --obsidian: #0D0D0F;
-      --carbon:   #16161A;
-      --slate:    #1E1E24;
-      --smoke:    #2A2A33;
-      --fog:      #9898A6;
-      --ghost:    #C8C8D4;
-      --snow:     #F0F0F6;
-      --jade:     #3ECF8E;
-      --amber:    #F5A623;
-      --violet:   #7C5CFC;
-      --rose:     #FF6B6B;
-    }
-
     html { scroll-behavior: smooth; }
 
-    .glass {
-      background: rgba(30, 30, 36, 0.7);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255,255,255,0.06);
+    body { background: #FAFAF8; }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: #EAE9E4; }
+    ::-webkit-scrollbar-thumb { background: #D4D3CC; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #9B9A94; }
+
+    input::placeholder { color: #9B9A94; }
+    input:focus, select:focus, button:focus { outline: none; }
+
+    .playfair { font-family: 'Playfair Display', serif; }
+    .plex { font-family: 'IBM Plex Sans', sans-serif; }
+    .mono { font-family: 'IBM Plex Mono', monospace; }
+
+    @keyframes ticker-scroll {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
     }
 
-    .glow-jade { box-shadow: 0 0 40px rgba(62, 207, 142, 0.15); }
-    .glow-amber { box-shadow: 0 0 40px rgba(245, 166, 35, 0.15); }
-
-    .noise-bg {
-      position: relative;
-    }
-    .noise-bg::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-      pointer-events: none;
-      opacity: 0.4;
-      border-radius: inherit;
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
     }
 
-    .scan-lines {
-      background-image: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(255,255,255,0.01) 2px,
-        rgba(255,255,255,0.01) 4px
-      );
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
 
-    input::placeholder { color: #4A4A58; }
-    input:focus { outline: none; }
-    select:focus { outline: none; }
-    button:focus { outline: none; }
-
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: var(--obsidian); }
-    ::-webkit-scrollbar-thumb { background: var(--smoke); border-radius: 2px; }
-    
-    .mono { font-family: 'DM Mono', monospace; }
-    .syne { font-family: 'Syne', sans-serif; }
-    .serif { font-family: 'Instrument Serif', serif; }
-
-    @keyframes pulse-ring {
-      0% { transform: scale(0.8); opacity: 0.8; }
-      100% { transform: scale(1.6); opacity: 0; }
+    .card-hover {
+      transition: box-shadow 0.25s ease, transform 0.25s ease;
     }
-    .live-dot::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: 50%;
-      background: var(--jade);
-      animation: pulse-ring 2s infinite;
+    .card-hover:hover {
+      box-shadow: 0 12px 40px rgba(27,42,74,0.12);
+      transform: translateY(-3px);
     }
 
-    @keyframes float {
-      0%, 100% { transform: translateY(0px); }
-      50% { transform: translateY(-8px); }
-    }
-
-    @keyframes shimmer {
-      0% { background-position: -200% 0; }
-      100% { background-position: 200% 0; }
-    }
-    .shimmer-text {
-      background: linear-gradient(90deg, #9898A6 0%, #F0F0F6 40%, #3ECF8E 60%, #9898A6 100%);
-      background-size: 200% auto;
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      animation: shimmer 4s linear infinite;
-    }
-
-    @keyframes border-spin {
-      to { --angle: 360deg; }
-    }
-    @property --angle {
-      syntax: '<angle>';
-      initial-value: 0deg;
-      inherits: false;
-    }
-    .spinning-border {
-      --angle: 0deg;
-      border: 1.5px solid;
-      border-image: conic-gradient(from var(--angle), transparent 70%, #3ECF8E, transparent) 1;
-      animation: border-spin 4s linear infinite;
+    .rule-line {
+      width: 100%; height: 1px;
+      background: linear-gradient(to right, #D4D3CC, transparent);
     }
   `}</style>
 );
 
-/* ─── CURSOR BLOB ───────────────────────────────────────── */
-function CursorBlob() {
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const sx = useSpring(x, { stiffness: 60, damping: 18 });
-  const sy = useSpring(y, { stiffness: 60, damping: 18 });
-
-  useEffect(() => {
-    const move = (e) => { x.set(e.clientX); y.set(e.clientY); };
-    window.addEventListener("mousemove", move);
-    return () => window.removeEventListener("mousemove", move);
-  }, []);
-
-  return (
-    <motion.div
-      style={{
-        left: sx, top: sy,
-        position: "fixed", pointerEvents: "none", zIndex: 0,
-        width: 600, height: 600,
-        borderRadius: "50%",
-        background: "radial-gradient(circle, rgba(62,207,142,0.04) 0%, transparent 70%)",
-        transform: "translate(-50%, -50%)",
-      }}
-    />
-  );
-}
-
-/* ─── STAT TICKER ───────────────────────────────────────── */
-function StatTicker({ profiles }) {
-  const avg = profiles.length ? (profiles.reduce((s, p) => s + p.pricePerKilo, 0) / profiles.length).toFixed(2) : 0;
-  const max = profiles.length ? Math.max(...profiles.map(p => p.pricePerKilo)) : 0;
-  const min = profiles.length ? Math.min(...profiles.map(p => p.pricePerKilo)) : 0;
-
+/* ─── MARKET TICKER ──────────────────────────────────────── */
+function MarketTicker({ profiles }) {
+  const avg   = profiles.length ? (profiles.reduce((s,p)=>s+p.pricePerKilo,0)/profiles.length).toFixed(2) : 0;
+  const high  = profiles.length ? Math.max(...profiles.map(p=>p.pricePerKilo)) : 0;
+  const low   = profiles.length ? Math.min(...profiles.map(p=>p.pricePerKilo)) : 0;
   const items = [
-    { label: "FACTORIES ONLINE", value: profiles.length, suffix: "" },
-    { label: "AVG PRICE / KG", value: `₹${avg}`, suffix: "" },
-    { label: "MARKET HIGH", value: `₹${max}`, suffix: "" },
-    { label: "MARKET LOW", value: `₹${min}`, suffix: "" },
-    { label: "TEA UNITS", value: profiles.filter(p => p.commodityType === "Tea").length, suffix: "" },
-    { label: "COFFEE UNITS", value: profiles.filter(p => p.commodityType === "Coffee").length, suffix: "" },
+    { label: "FACTORIES", value: profiles.length },
+    { label: "AVG PRICE",  value: `₹${avg}/kg` },
+    { label: "52W HIGH",   value: `₹${high}` },
+    { label: "52W LOW",    value: `₹${low}` },
+    { label: "TEA UNITS",  value: profiles.filter(p=>p.commodityType==="Tea").length },
+    { label: "COFFEE",     value: profiles.filter(p=>p.commodityType==="Coffee").length },
+    { label: "MARKET",     value: "OPEN" },
   ];
+  const doubled = [...items, ...items, ...items];
 
   return (
     <div style={{
-      fontFamily: "'DM Mono', monospace",
-      fontSize: 11, letterSpacing: "0.12em",
-      background: "rgba(62,207,142,0.04)",
-      borderTop: "1px solid rgba(62,207,142,0.15)",
-      borderBottom: "1px solid rgba(62,207,142,0.15)",
-      padding: "10px 0",
+      background: C.navy,
+      borderBottom: `1px solid ${C.navyD}`,
       overflow: "hidden",
-      position: "relative",
+      padding: "9px 0",
     }}>
       <motion.div
-        animate={{ x: [0, -2000] }}
-        transition={{ duration: 20, repeat: Infinity, ease: "linear", repeatType: "loop" }}
-        style={{ display: "flex", gap: 64, whiteSpace: "nowrap", width: "max-content" }}
+        animate={{ x: ["0%", "-33.33%"] }}
+        transition={{ duration: 28, repeat: Infinity, ease: "linear" }}
+        style={{ display: "flex", gap: 0, whiteSpace: "nowrap", width: "max-content" }}
       >
-        {[...items, ...items, ...items].map((item, i) => (
-          <span key={i} style={{ color: PALETTE.fog, display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ color: PALETTE.jade }}>◆</span>
-            <span>{item.label}</span>
-            <span style={{ color: PALETTE.snow, fontWeight: 500 }}>{item.value}{item.suffix}</span>
+        {doubled.map((item, i) => (
+          <span key={i} style={{
+            fontFamily: "'IBM Plex Mono', monospace",
+            fontSize: 11, padding: "0 32px",
+            display: "flex", alignItems: "center", gap: 10,
+            borderRight: `1px solid rgba(255,255,255,0.1)`,
+            color: "rgba(255,255,255,0.5)",
+          }}>
+            <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 8 }}>▸</span>
+            {item.label}
+            <span style={{ color: "#FFFFFF", fontWeight: 500 }}>{item.value}</span>
           </span>
         ))}
       </motion.div>
@@ -211,50 +133,42 @@ function StatTicker({ profiles }) {
   );
 }
 
-/* ─── LOADING SCREEN ────────────────────────────────────── */
+/* ─── LOADING ────────────────────────────────────────────── */
 function LoadingScreen() {
   return (
     <div style={{
-      minHeight: "100vh", background: PALETTE.obsidian,
+      minHeight: "100vh", background: C.paper,
       display: "flex", flexDirection: "column",
-      alignItems: "center", justifyContent: "center", gap: 32,
+      alignItems: "center", justifyContent: "center", gap: 28,
     }}>
-      <motion.div
-        style={{
-          width: 80, height: 80, position: "relative",
-          display: "flex", alignItems: "center", justifyContent: "center",
-        }}
-      >
-        {[0, 1, 2].map(i => (
-          <motion.div
-            key={i}
-            animate={{ scale: [1, 1.5, 1], opacity: [0.6, 0.1, 0.6] }}
-            transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.4, ease: "easeInOut" }}
+      <div style={{ position: "relative" }}>
+        {[44, 30, 18].map((s, i) => (
+          <motion.div key={i}
+            animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.8, 0.4] }}
+            transition={{ duration: 1.6, repeat: Infinity, delay: i * 0.3 }}
             style={{
-              position: "absolute",
-              width: 80 - i * 20, height: 80 - i * 20,
-              borderRadius: "50%",
-              border: `1.5px solid ${PALETTE.jade}`,
+              position: i === 0 ? "relative" : "absolute",
+              top: i === 0 ? 0 : `${(44-s)/2}px`,
+              left: i === 0 ? 0 : `${(44-s)/2}px`,
+              width: s, height: s, borderRadius: "50%",
+              border: `1.5px solid ${C.navy}`,
             }}
           />
         ))}
-        <Factory size={24} color={PALETTE.jade} />
-      </motion.div>
+      </div>
       <div style={{ textAlign: "center" }}>
-        <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: PALETTE.jade, letterSpacing: "0.3em", marginBottom: 8 }}>
-          SYNCHRONIZING
+        <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.teal, letterSpacing: "0.3em", marginBottom: 6 }}>
+          LOADING MARKET DATA
         </p>
-        <p style={{ fontFamily: "'Syne', sans-serif", color: PALETTE.fog, fontSize: 14 }}>
-          Fetching market intelligence...
+        <p style={{ fontFamily: "'IBM Plex Sans', sans-serif", color: C.stone, fontSize: 13 }}>
+          Synchronizing commodity index...
         </p>
       </div>
-      <div style={{
-        width: 200, height: 2, background: PALETTE.smoke, borderRadius: 1, overflow: "hidden"
-      }}>
+      <div style={{ width: 180, height: 2, background: C.silk, borderRadius: 1, overflow: "hidden" }}>
         <motion.div
-          animate={{ x: ["-100%", "100%"] }}
+          animate={{ x: ["-100%", "200%"] }}
           transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
-          style={{ height: "100%", width: "50%", background: `linear-gradient(90deg, transparent, ${PALETTE.jade}, transparent)` }}
+          style={{ height: "100%", width: "45%", background: `linear-gradient(90deg, transparent, ${C.navy}, transparent)` }}
         />
       </div>
     </div>
@@ -266,17 +180,17 @@ const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
     <div style={{
-      background: PALETTE.slate, border: `1px solid rgba(255,255,255,0.08)`,
-      borderRadius: 16, padding: "16px 20px",
-      fontFamily: "'DM Mono', monospace", fontSize: 12,
-      boxShadow: "0 20px 60px rgba(0,0,0,0.6)",
+      background: C.white, border: `1px solid ${C.silk}`,
+      borderRadius: 12, padding: "14px 18px",
+      fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
+      boxShadow: "0 8px 32px rgba(27,42,74,0.12)",
     }}>
-      <p style={{ color: PALETTE.fog, marginBottom: 12, letterSpacing: "0.1em" }}>{label}</p>
+      <p style={{ color: C.stone, marginBottom: 10, letterSpacing: "0.06em", fontSize: 10 }}>{label}</p>
       {payload.map((p, i) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-          <div style={{ width: 8, height: 8, borderRadius: 2, background: p.fill }} />
-          <span style={{ color: PALETTE.ghost, fontSize: 11 }}>{p.name}</span>
-          <span style={{ color: PALETTE.snow, marginLeft: "auto", fontWeight: 500 }}>₹{p.value}</span>
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+          <div style={{ width: 8, height: 8, borderRadius: 2, background: p.fill, flexShrink: 0 }} />
+          <span style={{ color: C.slate, fontSize: 10 }}>{p.name}</span>
+          <span style={{ color: C.ink, fontWeight: 500, marginLeft: "auto", paddingLeft: 12 }}>₹{p.value}</span>
         </div>
       ))}
     </div>
@@ -285,131 +199,125 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 /* ─── FACTORY CARD ───────────────────────────────────────── */
 function FactoryCard({ p, index, onNavigate, copied, onCopy }) {
-  const isTea = p.commodityType === "Tea";
-  const accent = isTea ? PALETTE.jade : PALETTE.amber;
+  const isTea  = p.commodityType === "Tea";
+  const accent = isTea ? C.teal : C.gold;
+  const accentL= isTea ? C.tealL : C.goldL;
+  const accentM= isTea ? C.tealM : C.goldM;
 
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 40, scale: 0.96 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -20, scale: 0.94 }}
-      transition={{ duration: 0.4, delay: index * 0.06, ease: [0.16, 1, 0.3, 1] }}
-      whileHover={{ y: -6 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.97 }}
+      transition={{ duration: 0.35, delay: index * 0.055, ease: [0.25, 1, 0.5, 1] }}
       onClick={() => onNavigate(`/factory/${p._id}`)}
+      className="card-hover"
       style={{
-        background: PALETTE.slate,
-        borderRadius: 24,
-        border: "1px solid rgba(255,255,255,0.06)",
-        padding: 28,
+        background: C.white,
+        borderRadius: 16,
+        border: `1px solid ${C.silk}`,
+        overflow: "hidden",
         cursor: "pointer",
         position: "relative",
-        overflow: "hidden",
       }}
     >
-      {/* Accent corner glow */}
-      <div style={{
-        position: "absolute", top: -40, right: -40,
-        width: 120, height: 120, borderRadius: "50%",
-        background: `radial-gradient(circle, ${accent}20 0%, transparent 70%)`,
-        pointerEvents: "none",
-      }} />
+      {/* Top accent bar */}
+      <div style={{ height: 3, background: `linear-gradient(90deg, ${accent}, ${accentM})` }} />
 
-      {/* Top row */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
-        <motion.div
-          whileHover={{ rotate: 15 }}
-          style={{
-            width: 48, height: 48, borderRadius: 14,
-            background: `${accent}15`,
+      <div style={{ padding: "24px 26px 26px" }}>
+
+        {/* Header row */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: 12,
+            background: accentL, border: `1px solid ${accentM}`,
             display: "flex", alignItems: "center", justifyContent: "center",
-            border: `1px solid ${accent}30`,
-          }}
-        >
-          {isTea ? <Leaf size={22} color={accent} /> : <Coffee size={22} color={accent} />}
-        </motion.div>
-
-        <span style={{
-          fontFamily: "'DM Mono', monospace",
-          fontSize: 9, letterSpacing: "0.2em",
-          color: accent,
-          background: `${accent}12`,
-          border: `1px solid ${accent}30`,
-          padding: "5px 12px", borderRadius: 8,
-          textTransform: "uppercase",
-        }}>
-          {p.commodityType}
-        </span>
-      </div>
-
-      {/* Name & Price */}
-      <h3 style={{
-        fontFamily: "'Syne', sans-serif",
-        fontSize: 18, fontWeight: 700,
-        color: PALETTE.snow, marginBottom: 6,
-        letterSpacing: "-0.02em",
-      }}>
-        {p.factoryName}
-      </h3>
-
-      <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 24 }}>
-        <span style={{
-          fontFamily: "'Syne', sans-serif",
-          fontSize: 36, fontWeight: 800,
-          color: accent, letterSpacing: "-0.03em", lineHeight: 1,
-        }}>
-          ₹{p.pricePerKilo}
-        </span>
-        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: PALETTE.fog }}>/kg</span>
-      </div>
-
-      {/* Divider */}
-      <div style={{ height: 1, background: "rgba(255,255,255,0.05)", marginBottom: 20 }} />
-
-      {/* Info rows */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <InfoRow icon={<User size={13} color={accent} />} label={p.ownerName} />
-        <div
-          onClick={(e) => onCopy(e, p.contactNumber, p._id)}
-          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "copy" }}
-        >
-          <InfoRow icon={<Phone size={13} color={accent} />} label={p.contactNumber} />
-          <motion.div whileTap={{ scale: 0.8 }}>
-            {copied === p._id
-              ? <Check size={13} color={PALETTE.jade} />
-              : <Copy size={13} color={PALETTE.fog} />}
-          </motion.div>
+          }}>
+            {isTea
+              ? <Leaf size={20} color={accent} />
+              : <Coffee size={20} color={accent} />}
+          </div>
+          <span style={{
+            fontFamily: "'IBM Plex Mono', monospace",
+            fontSize: 9, letterSpacing: "0.18em",
+            color: accent, background: accentL,
+            border: `1px solid ${accentM}`,
+            padding: "4px 10px", borderRadius: 6,
+            textTransform: "uppercase",
+          }}>
+            {p.commodityType}
+          </span>
         </div>
-        <InfoRow icon={<MapPin size={13} color={accent} />} label={p.address} truncate />
+
+        {/* Name */}
+        <h3 style={{
+          fontFamily: "'Playfair Display', serif",
+          fontSize: 18, fontWeight: 600,
+          color: C.ink, marginBottom: 4,
+          lineHeight: 1.3, letterSpacing: "-0.01em",
+        }}>
+          {p.factoryName}
+        </h3>
+
+        {/* Price */}
+        <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 22 }}>
+          <span style={{
+            fontFamily: "'Playfair Display', serif",
+            fontSize: 34, fontWeight: 700,
+            color: accent, letterSpacing: "-0.03em", lineHeight: 1.1,
+          }}>
+            ₹{p.pricePerKilo}
+          </span>
+          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.stone }}>/kg</span>
+        </div>
+
+        {/* Divider */}
+        <div style={{ height: 1, background: C.pearl, marginBottom: 18 }} />
+
+        {/* Info */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <MiniRow icon={<User size={12} color={C.teal} />} text={p.ownerName} />
+          <div
+            onClick={(e) => onCopy(e, p.contactNumber, p._id)}
+            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "copy" }}
+          >
+            <MiniRow icon={<Phone size={12} color={C.teal} />} text={p.contactNumber} />
+            <motion.div whileTap={{ scale: 0.75 }} style={{ color: copied===p._id ? C.teal : C.mist }}>
+              {copied===p._id ? <Check size={13} /> : <Copy size={13} />}
+            </motion.div>
+          </div>
+          <MiniRow icon={<MapPin size={12} color={C.teal} />} text={p.address} truncate />
+        </div>
       </div>
     </motion.div>
   );
 }
 
-function InfoRow({ icon, label, truncate }) {
+function MiniRow({ icon, text, truncate }) {
   return (
-    <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
       <span style={{ marginTop: 2, flexShrink: 0 }}>{icon}</span>
       <span style={{
-        fontFamily: "'DM Mono', monospace",
-        fontSize: 12, color: PALETTE.fog, lineHeight: 1.5,
+        fontFamily: "'IBM Plex Sans', sans-serif",
+        fontSize: 12.5, color: C.slate, lineHeight: 1.5,
         overflow: truncate ? "hidden" : undefined,
         textOverflow: truncate ? "ellipsis" : undefined,
         whiteSpace: truncate ? "nowrap" : undefined,
       }}>
-        {label}
+        {text}
       </span>
     </div>
   );
 }
 
-/* ─── MAIN COMPONENT ─────────────────────────────────────── */
+/* ─── MAIN ───────────────────────────────────────────────── */
 export default function PublicProfiles() {
-  const [profiles, setProfiles] = useState([]);
-  const [chartData, setChartData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState(null);
-  const [search, setSearch] = useState("");
+  const [profiles, setProfiles]     = useState([]);
+  const [chartData, setChartData]   = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [copied, setCopied]         = useState(null);
+  const [search, setSearch]         = useState("");
   const [commodityFilter, setCommodityFilter] = useState("All");
   const [sortOption, setSortOption] = useState("none");
   const navigate = useNavigate();
@@ -417,7 +325,7 @@ export default function PublicProfiles() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const profileRes = await API.get("/profile");
+        const profileRes  = await API.get("/profile");
         const profileList = profileRes.data;
         setProfiles(profileList);
         if (!profileList.length) { setLoading(false); return; }
@@ -428,11 +336,11 @@ export default function PublicProfiles() {
           dateSet.add(new Date(item.date).toISOString().split("T")[0]);
         }));
 
-        const weeklyDates = Array.from(dateSet).sort((a, b) => new Date(a) - new Date(b)).slice(-7);
-        const finalData = weeklyDates.map(date => {
+        const weeklyDates = Array.from(dateSet).sort((a,b)=>new Date(a)-new Date(b)).slice(-7);
+        const finalData   = weeklyDates.map(date => {
           const row = { date };
           historyResults.forEach((res, i) => {
-            const r = res.data.find(item => new Date(item.date).toISOString().split("T")[0] === date);
+            const r = res.data.find(item => new Date(item.date).toISOString().split("T")[0]===date);
             row[profileList[i].factoryName] = r?.price || 0;
           });
           return row;
@@ -451,8 +359,8 @@ export default function PublicProfiles() {
     let f = [...profiles];
     if (search) f = f.filter(p => p.factoryName.toLowerCase().includes(search.toLowerCase()));
     if (commodityFilter !== "All") f = f.filter(p => p.commodityType === commodityFilter);
-    if (sortOption === "priceHigh") f.sort((a, b) => b.pricePerKilo - a.pricePerKilo);
-    if (sortOption === "priceLow") f.sort((a, b) => a.pricePerKilo - b.pricePerKilo);
+    if (sortOption === "priceHigh") f.sort((a,b) => b.pricePerKilo - a.pricePerKilo);
+    if (sortOption === "priceLow")  f.sort((a,b) => a.pricePerKilo - b.pricePerKilo);
     return f;
   }, [profiles, search, commodityFilter, sortOption]);
 
@@ -468,216 +376,201 @@ export default function PublicProfiles() {
   return (
     <>
       <FontStyle />
-      <CursorBlob />
+      <div style={{ minHeight: "100vh", background: C.paper, color: C.ink }}>
 
-      <div style={{
-        minHeight: "100vh",
-        background: PALETTE.obsidian,
-        color: PALETTE.snow,
-        position: "relative",
-        zIndex: 1,
-      }}>
-
-        {/* AMBIENT BG GRADIENTS */}
-        <div style={{
-          position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0,
-          background: `
-            radial-gradient(ellipse 60% 40% at 0% 0%, rgba(62,207,142,0.06) 0%, transparent 60%),
-            radial-gradient(ellipse 50% 40% at 100% 100%, rgba(124,92,252,0.06) 0%, transparent 60%)
-          `,
-        }} />
-
-        {/* HEADER NAV BAR */}
-        <motion.header
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          style={{
-            position: "sticky", top: 0, zIndex: 100,
-            background: "rgba(13,13,15,0.8)",
-            backdropFilter: "blur(24px)",
-            borderBottom: "1px solid rgba(255,255,255,0.05)",
-            padding: "0 40px",
-          }}
-        >
+        {/* ── HEADER ─────────────────────────────────────── */}
+        <header style={{
+          background: C.white,
+          borderBottom: `1px solid ${C.silk}`,
+          position: "sticky", top: 0, zIndex: 100,
+          boxShadow: "0 1px 0 rgba(0,0,0,0.04)",
+        }}>
           <div style={{
-            maxWidth: 1280, margin: "0 auto",
-            display: "flex", alignItems: "center",
-            justifyContent: "space-between",
-            height: 64,
+            maxWidth: 1320, margin: "0 auto",
+            padding: "0 40px", height: 64,
+            display: "flex", alignItems: "center", justifyContent: "space-between",
           }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <div style={{
-                width: 32, height: 32, borderRadius: 10,
-                background: "linear-gradient(135deg, #3ECF8E, #7C5CFC)",
+                width: 34, height: 34, borderRadius: 9,
+                background: C.navy,
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>
-                <Factory size={16} color="#fff" />
+                <Factory size={17} color="#fff" />
               </div>
-              <span style={{
-                fontFamily: "'Syne', sans-serif",
-                fontSize: 16, fontWeight: 700,
-                color: PALETTE.snow, letterSpacing: "-0.02em",
-              }}>
-                MarketCore
-              </span>
+              <div>
+                <span style={{
+                  fontFamily: "'Playfair Display', serif",
+                  fontSize: 17, fontWeight: 700,
+                  color: C.navy, letterSpacing: "-0.02em",
+                }}>
+                  MarketCore
+                </span>
+                <span style={{
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontSize: 9, color: C.stone, letterSpacing: "0.2em",
+                  display: "block", marginTop: -2,
+                }}>
+                  COMMODITY INTELLIGENCE
+                </span>
+              </div>
             </div>
 
-            {/* Live indicator */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ position: "relative", width: 8, height: 8 }} className="live-dot">
-                <div style={{
-                  width: 8, height: 8, borderRadius: "50%",
-                  background: PALETTE.jade, position: "relative", zIndex: 1,
-                }} />
-              </div>
-              <span style={{
-                fontFamily: "'DM Mono', monospace",
-                fontSize: 10, color: PALETTE.jade, letterSpacing: "0.2em",
-              }}>
+            {/* Live badge */}
+            <div style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "6px 14px", borderRadius: 20,
+              border: `1px solid ${C.tealM}`,
+              background: C.tealL,
+            }}>
+              <motion.div
+                animate={{ opacity: [1, 0.3, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                style={{ width: 7, height: 7, borderRadius: "50%", background: C.teal }}
+              />
+              <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.teal, letterSpacing: "0.15em" }}>
                 LIVE
               </span>
             </div>
           </div>
-        </motion.header>
+        </header>
 
-        {/* TICKER */}
-        <StatTicker profiles={profiles} />
+        {/* ── TICKER ─────────────────────────────────────── */}
+        <MarketTicker profiles={profiles} />
 
-        {/* HERO SECTION */}
-        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "80px 40px 48px", position: "relative", zIndex: 1 }}>
+        {/* ── HERO ───────────────────────────────────────── */}
+        <div style={{ maxWidth: 1320, margin: "0 auto", padding: "64px 40px 40px" }}>
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.6, ease: [0.25, 1, 0.5, 1] }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-              <div style={{ width: 24, height: 1, background: PALETTE.jade }} />
+            {/* Eyebrow */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
+              <div style={{ width: 28, height: 2, background: C.navy, borderRadius: 1 }} />
               <span style={{
-                fontFamily: "'DM Mono', monospace",
-                fontSize: 10, letterSpacing: "0.3em",
-                color: PALETTE.jade, textTransform: "uppercase",
+                fontFamily: "'IBM Plex Mono', monospace",
+                fontSize: 10, letterSpacing: "0.28em",
+                color: C.navy, textTransform: "uppercase",
               }}>
-                Commodity Intelligence Platform
+                Market Directory
               </span>
             </div>
 
-            <h1 style={{
-              fontFamily: "'Syne', sans-serif",
-              fontSize: "clamp(40px, 6vw, 72px)",
-              fontWeight: 800,
-              letterSpacing: "-0.04em",
-              lineHeight: 1.05,
-              marginBottom: 20,
-            }}>
-              <span style={{ color: PALETTE.snow }}>Factory</span>
-              {" "}
-              <span style={{
-                fontFamily: "'Instrument Serif', serif",
-                fontStyle: "italic",
-                background: "linear-gradient(135deg, #3ECF8E 0%, #7C5CFC 100%)",
-                WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-              }}>
-                Directory
-              </span>
-            </h1>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 20 }}>
+              <div>
+                <h1 style={{
+                  fontFamily: "'Playfair Display', serif",
+                  fontSize: "clamp(38px, 5vw, 60px)",
+                  fontWeight: 700, letterSpacing: "-0.03em", lineHeight: 1.1,
+                  color: C.ink,
+                }}>
+                  Factory{" "}
+                  <span style={{ fontStyle: "italic", color: C.navy }}>Directory</span>
+                </h1>
+                <p style={{
+                  fontFamily: "'IBM Plex Sans', sans-serif",
+                  fontSize: 14, color: C.stone,
+                  marginTop: 10, lineHeight: 1.7, maxWidth: 480,
+                }}>
+                  Live procurement monitoring across {profiles.length} registered commodity units. Price data updated in real time.
+                </p>
+              </div>
 
-            <p style={{
-              fontFamily: "'DM Mono', monospace",
-              fontSize: 13, color: PALETTE.fog, maxWidth: 500, lineHeight: 1.8,
-            }}>
-              Real-time procurement monitoring across {profiles.length} registered commodity units.
-              Price intelligence updated live.
-            </p>
+              {/* Summary stats */}
+              <div style={{ display: "flex", gap: 1, background: C.silk, borderRadius: 12, overflow: "hidden", border: `1px solid ${C.mist}` }}>
+                {[
+                  { label: "Units", value: profiles.length },
+                  { label: "Tea", value: profiles.filter(p=>p.commodityType==="Tea").length },
+                  { label: "Coffee", value: profiles.filter(p=>p.commodityType==="Coffee").length },
+                ].map((s, i) => (
+                  <div key={i} style={{ padding: "14px 22px", background: C.white, textAlign: "center" }}>
+                    <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: C.navy }}>{s.value}</p>
+                    <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, color: C.stone, letterSpacing: "0.15em", marginTop: 2 }}>{s.label.toUpperCase()}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </motion.div>
-        </div>
 
-        {/* FILTER BAR */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.6 }}
-          style={{
-            maxWidth: 1280, margin: "0 auto 48px",
-            padding: "0 40px",
-            position: "relative", zIndex: 1,
-          }}
-        >
-          <div style={{
-            background: PALETTE.slate,
-            border: "1px solid rgba(255,255,255,0.07)",
-            borderRadius: 20, padding: 8,
-            display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center",
-          }}>
+          {/* Divider */}
+          <div style={{ height: 1, background: C.silk, margin: "40px 0" }} />
+
+          {/* ── FILTER BAR ────────────────────────────────── */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.5 }}
+            style={{
+              display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center",
+              marginBottom: 36,
+            }}
+          >
             {/* Search */}
             <div style={{
-              flex: "1 1 220px",
+              flex: "1 1 240px",
               display: "flex", alignItems: "center", gap: 10,
-              background: PALETTE.smoke,
-              borderRadius: 14, padding: "0 16px", height: 46,
+              background: C.white, border: `1px solid ${C.silk}`,
+              borderRadius: 10, padding: "0 16px", height: 44,
+              boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
             }}>
-              <Search size={15} color={PALETTE.fog} />
+              <Search size={15} color={C.mist} />
               <input
                 type="text"
-                placeholder="Search factories..."
+                placeholder="Search factory name..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 style={{
                   background: "transparent", border: "none",
-                  color: PALETTE.snow, flex: 1,
-                  fontFamily: "'DM Mono', monospace", fontSize: 12,
-                  letterSpacing: "0.05em",
+                  color: C.ink, flex: 1,
+                  fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13,
                 }}
               />
             </div>
 
-            {/* Commodity filter */}
-            {["All", "Tea", "Coffee"].map(opt => (
-              <button
-                key={opt}
-                onClick={() => setCommodityFilter(opt)}
-                style={{
-                  height: 46, padding: "0 18px", borderRadius: 14,
-                  border: "none", cursor: "pointer",
-                  background: commodityFilter === opt
-                    ? (opt === "Tea" ? `${PALETTE.jade}20` : opt === "Coffee" ? `${PALETTE.amber}20` : `${PALETTE.violet}20`)
-                    : "transparent",
-                  color: commodityFilter === opt
-                    ? (opt === "Tea" ? PALETTE.jade : opt === "Coffee" ? PALETTE.amber : PALETTE.violet)
-                    : PALETTE.fog,
-                  fontFamily: "'DM Mono', monospace",
-                  fontSize: 11, letterSpacing: "0.1em",
-                  transition: "all 0.2s",
-                  border: commodityFilter === opt
-                    ? `1px solid ${opt === "Tea" ? PALETTE.jade : opt === "Coffee" ? PALETTE.amber : PALETTE.violet}30`
-                    : "1px solid transparent",
-                }}
-              >
-                {opt === "All" ? "ALL TYPES" : opt.toUpperCase()}
-              </button>
-            ))}
+            {/* Commodity pills */}
+            <div style={{ display: "flex", background: C.white, border: `1px solid ${C.silk}`, borderRadius: 10, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+              {["All", "Tea", "Coffee"].map(opt => (
+                <button
+                  key={opt}
+                  onClick={() => setCommodityFilter(opt)}
+                  style={{
+                    height: 44, padding: "0 20px",
+                    border: "none", cursor: "pointer",
+                    background: commodityFilter === opt ? C.navy : "transparent",
+                    color: commodityFilter === opt ? "#fff" : C.slate,
+                    fontFamily: "'IBM Plex Mono', monospace",
+                    fontSize: 10, letterSpacing: "0.12em",
+                    transition: "all 0.18s",
+                    borderRight: opt !== "Coffee" ? `1px solid ${C.silk}` : "none",
+                  }}
+                >
+                  {opt.toUpperCase()}
+                </button>
+              ))}
+            </div>
 
             {/* Sort */}
             <div style={{
               display: "flex", alignItems: "center", gap: 8,
-              background: PALETTE.smoke, borderRadius: 14,
-              padding: "0 16px", height: 46,
-              borderLeft: "1px solid rgba(255,255,255,0.05)",
+              background: C.white, border: `1px solid ${C.silk}`,
+              borderRadius: 10, padding: "0 16px", height: 44,
+              boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
             }}>
-              <Filter size={13} color={PALETTE.fog} />
+              <Filter size={13} color={C.stone} />
               <select
                 value={sortOption}
                 onChange={e => setSortOption(e.target.value)}
                 style={{
                   background: "transparent", border: "none",
-                  color: PALETTE.ghost, fontFamily: "'DM Mono', monospace",
-                  fontSize: 11, letterSpacing: "0.08em", cursor: "pointer",
+                  color: C.slate,
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontSize: 10, letterSpacing: "0.08em", cursor: "pointer",
                 }}
               >
-                <option value="none">SORT</option>
-                <option value="priceHigh">↑ HIGHEST</option>
-                <option value="priceLow">↓ LOWEST</option>
+                <option value="none">SORT BY</option>
+                <option value="priceHigh">PRICE ↓ HIGH</option>
+                <option value="priceLow">PRICE ↑ LOW</option>
               </select>
             </div>
 
@@ -687,181 +580,134 @@ export default function PublicProfiles() {
               transition={{ duration: 0.3 }}
               onClick={() => { setSearch(""); setCommodityFilter("All"); setSortOption("none"); }}
               style={{
-                width: 46, height: 46, borderRadius: 14,
-                background: "transparent", border: "1px solid rgba(255,255,255,0.07)",
+                width: 44, height: 44, borderRadius: 10,
+                background: C.white, border: `1px solid ${C.silk}`,
                 cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-                color: PALETTE.fog,
+                color: C.stone, boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
               }}
-              title="Reset"
             >
               <RotateCcw size={15} />
             </motion.button>
-          </div>
-        </motion.div>
 
-        {/* GRID */}
-        <div style={{
-          maxWidth: 1280, margin: "0 auto",
-          padding: "0 40px 80px",
-          position: "relative", zIndex: 1,
-        }}>
-          {/* Count badge */}
-          <motion.div
-            layout
-            style={{
-              fontFamily: "'DM Mono', monospace",
-              fontSize: 11, color: PALETTE.fog,
-              letterSpacing: "0.15em", marginBottom: 28,
-            }}
-          >
-            <span style={{ color: PALETTE.jade }}>{filteredProfiles.length}</span>
-            {" "} UNITS MATCHING
+            {/* Result count */}
+            <span style={{
+              fontFamily: "'IBM Plex Mono', monospace",
+              fontSize: 10, color: C.stone, letterSpacing: "0.12em",
+              marginLeft: "auto",
+            }}>
+              {filteredProfiles.length} RESULTS
+            </span>
           </motion.div>
 
+          {/* ── GRID ──────────────────────────────────────── */}
           <AnimatePresence mode="popLayout">
-            <motion.div
-              layout
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-                gap: 20,
-              }}
-            >
+            <motion.div layout style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+              gap: 18, marginBottom: 80,
+            }}>
               {filteredProfiles.map((p, i) => (
                 <FactoryCard
-                  key={p._id}
-                  p={p}
-                  index={i}
+                  key={p._id} p={p} index={i}
                   onNavigate={navigate}
-                  copied={copied}
-                  onCopy={copyToClipboard}
+                  copied={copied} onCopy={copyToClipboard}
                 />
               ))}
             </motion.div>
           </AnimatePresence>
 
           {filteredProfiles.length === 0 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               style={{ textAlign: "center", padding: "80px 0" }}
             >
-              <div style={{ fontSize: 48, marginBottom: 16 }}>◈</div>
-              <p style={{ fontFamily: "'Syne', sans-serif", color: PALETTE.fog, fontSize: 16 }}>
+              <Factory size={36} color={C.mist} style={{ margin: "0 auto 16px" }} />
+              <p style={{ fontFamily: "'Playfair Display', serif", color: C.stone, fontSize: 18 }}>
                 No factories match your filters
               </p>
             </motion.div>
           )}
-        </div>
 
-        {/* CHART SECTION */}
-        {chartData.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-80px" }}
-            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            style={{
-              maxWidth: 1280, margin: "0 auto 80px",
-              padding: "0 40px",
-              position: "relative", zIndex: 1,
-            }}
-          >
-            <div style={{
-              background: PALETTE.carbon,
-              border: "1px solid rgba(255,255,255,0.06)",
-              borderRadius: 32, padding: "48px",
-              position: "relative", overflow: "hidden",
-            }}>
-              {/* BG decoration */}
+          {/* ── CHART ─────────────────────────────────────── */}
+          {chartData.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-60px" }}
+              transition={{ duration: 0.6 }}
+              style={{
+                background: C.white,
+                border: `1px solid ${C.silk}`,
+                borderRadius: 20,
+                overflow: "hidden",
+                marginBottom: 80,
+                boxShadow: "0 2px 16px rgba(27,42,74,0.06)",
+              }}
+            >
+              {/* Chart header */}
               <div style={{
-                position: "absolute", bottom: -60, right: -60,
-                width: 300, height: 300,
-                borderRadius: "50%",
-                background: `radial-gradient(circle, rgba(124,92,252,0.08) 0%, transparent 70%)`,
-                pointerEvents: "none",
-              }} />
-
-              <div style={{ marginBottom: 40 }}>
+                padding: "32px 40px 28px",
+                borderBottom: `1px solid ${C.pearl}`,
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+              }}>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                    <TrendingUp size={14} color={C.navy} />
+                    <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.navy, letterSpacing: "0.2em" }}>
+                      PRICE ANALYTICS
+                    </span>
+                  </div>
+                  <h2 style={{
+                    fontFamily: "'Playfair Display', serif",
+                    fontSize: 22, fontWeight: 600, color: C.ink, letterSpacing: "-0.02em",
+                  }}>
+                    7-Session Price Comparison
+                  </h2>
+                </div>
                 <span style={{
-                  fontFamily: "'DM Mono', monospace",
-                  fontSize: 10, letterSpacing: "0.25em",
-                  color: PALETTE.violet, textTransform: "uppercase",
-                  display: "block", marginBottom: 12,
+                  fontFamily: "'IBM Plex Mono', monospace", fontSize: 10,
+                  color: C.stone, letterSpacing: "0.1em",
                 }}>
-                  ◈ Price Intelligence
+                  HISTORICAL · ALL UNITS
                 </span>
-                <h2 style={{
-                  fontFamily: "'Syne', sans-serif",
-                  fontSize: 28, fontWeight: 800,
-                  color: PALETTE.snow, letterSpacing: "-0.03em",
-                }}>
-                  7-Session Price Flux
-                </h2>
-                <p style={{
-                  fontFamily: "'DM Mono', monospace",
-                  fontSize: 12, color: PALETTE.fog, marginTop: 8,
-                }}>
-                  Historical price comparison across all commodity units
-                </p>
               </div>
 
-              <div style={{ height: 420 }}>
+              <div style={{ padding: "32px 40px 36px", height: 440 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ top: 20, right: 20, left: -10, bottom: 0 }} barGap={2}>
-                    <CartesianGrid strokeDasharray="1 4" vertical={false} stroke="rgba(255,255,255,0.04)" />
-                    <XAxis
-                      dataKey="date"
-                      axisLine={false} tickLine={false}
-                      tick={{ fill: PALETTE.fog, fontSize: 10, fontFamily: "'DM Mono', monospace", letterSpacing: "0.05em" }}
-                      dy={12}
-                    />
-                    <YAxis
-                      axisLine={false} tickLine={false}
-                      tick={{ fill: PALETTE.fog, fontSize: 10, fontFamily: "'DM Mono', monospace" }}
-                    />
-                    <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(255,255,255,0.02)", radius: 8 }} />
+                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }} barGap={2} barCategoryGap="28%">
+                    <CartesianGrid strokeDasharray="2 4" vertical={false} stroke={C.pearl} />
+                    <XAxis dataKey="date" axisLine={false} tickLine={false}
+                      tick={{ fill: C.stone, fontSize: 11, fontFamily: "'IBM Plex Mono', monospace" }} dy={10} />
+                    <YAxis axisLine={false} tickLine={false}
+                      tick={{ fill: C.stone, fontSize: 11, fontFamily: "'IBM Plex Mono', monospace" }} />
+                    <Tooltip content={<CustomTooltip />} cursor={{ fill: C.pearl, radius: 4 }} />
                     <Legend
-                      iconType="circle"
-                      iconSize={8}
-                      wrapperStyle={{
-                        paddingTop: 28,
-                        fontFamily: "'DM Mono', monospace",
-                        fontSize: 10, letterSpacing: "0.08em",
-                        color: PALETTE.fog,
-                      }}
+                      iconType="circle" iconSize={8}
+                      wrapperStyle={{ paddingTop: 24, fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, letterSpacing: "0.06em", color: C.stone }}
                     />
                     {filteredProfiles.map((p, i) => (
                       <Bar
-                        key={p._id}
-                        dataKey={p.factoryName}
+                        key={p._id} dataKey={p.factoryName}
                         fill={CHART_COLORS[i % CHART_COLORS.length]}
-                        radius={[6, 6, 0, 0]}
-                        barSize={14}
-                        opacity={0.85}
+                        radius={[4, 4, 0, 0]} barSize={16} opacity={0.88}
                       />
                     ))}
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* FOOTER */}
-        <div style={{
-          borderTop: "1px solid rgba(255,255,255,0.04)",
-          padding: "32px 40px",
-          display: "flex", justifyContent: "center", alignItems: "center",
-        }}>
-          <span style={{
-            fontFamily: "'DM Mono', monospace",
-            fontSize: 10, color: PALETTE.smoke,
-            letterSpacing: "0.2em",
-          }}>
-            MARKETCORE · COMMODITY INTELLIGENCE SYSTEM · {new Date().getFullYear()}
-          </span>
+            </motion.div>
+          )}
         </div>
+
+        {/* ── FOOTER ─────────────────────────────────────── */}
+        <footer style={{
+          background: C.navy, color: "rgba(255,255,255,0.4)",
+          padding: "24px 40px",
+          display: "flex", justifyContent: "center",
+          fontFamily: "'IBM Plex Mono', monospace",
+          fontSize: 10, letterSpacing: "0.2em",
+        }}>
+          MARKETCORE · COMMODITY INTELLIGENCE PLATFORM · {new Date().getFullYear()}
+        </footer>
       </div>
     </>
   );
