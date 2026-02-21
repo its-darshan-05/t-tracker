@@ -17,6 +17,24 @@ const FontStyle = () => (
     a { text-decoration: none; }
     button { cursor: pointer; }
     input, button, select, textarea { outline: none; }
+
+    @keyframes teaGlow {
+      0%, 100% {
+        text-shadow:
+          0 0 6px rgba(13, 122, 107, 0.0),
+          0 0 12px rgba(13, 122, 107, 0.0);
+      }
+      50% {
+        text-shadow:
+          0 0 10px rgba(13, 122, 107, 0.55),
+          0 0 24px rgba(13, 122, 107, 0.30),
+          0 0 40px rgba(13, 122, 107, 0.15);
+      }
+    }
+
+    .brand-glow {
+      animation: teaGlow 3s ease-in-out infinite;
+    }
   `}</style>
 );
 
@@ -60,11 +78,17 @@ export default function Navbar() {
             >
               <Leaf size={17} color="#fff" />
             </motion.div>
-            <span style={{
-              fontFamily: "'Playfair Display', serif",
-              fontSize: 18, fontWeight: 700,
-              color: C.navy, letterSpacing: "-0.025em",
-            }}>
+            <span
+              className="brand-glow"
+              style={{
+                fontFamily: "'Playfair Display', serif",
+                fontSize: 24,        /* ← bigger: was 18 */
+                fontWeight: 700,
+                color: C.navy,
+                letterSpacing: "-0.025em",
+                lineHeight: 1,
+              }}
+            >
               Tea<span style={{ fontStyle: "italic", color: C.teal }}>Tracker</span>
             </span>
           </Link>
